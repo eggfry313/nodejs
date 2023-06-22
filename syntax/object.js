@@ -4,3 +4,7 @@ var roles = {
     'manager' : 'hoya'
 }
 console.log(roles.programmer);
+
+for(var name in roles){
+    console.log(name, roles[name]);
+}
