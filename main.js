@@ -134,8 +134,10 @@ var app = http.createServer(function (request, response) {
     });
     request.on('end', function () {
       var post = qs.parse(body);
-      var id = post.id;
-      fs.unlink(`data/${id}`, function (err) {
+      dbCon.query(`delete from topic where id=?`, [post.id], function(error, results){
+        if(error){
+          throw error;
+        }
         response.writeHead(302, { Location: `/` });
         response.end();
       })
