@@ -37,15 +37,16 @@ var app = http.createServer(function (request, response) {
         if (error) {
           throw error;
         }
-        dbCon.query(`select * from topic where id=?`, [queryData.id], function (errorSec, topic) {
+        dbCon.query(`select * from topic left join author on topic.author_id=author.id where topic.id=?`, [queryData.id], function (errorSec, topic) {
           if (errorSec) {
             throw errorSec;
           }
+          console.log(topic);
           var title = topic[0].title;
           var description = topic[0].description;
           var list = template.list(topics);
           var html = template.HTML(title, list,
-            `<h2>${title}</h2>${description}`,
+            `<h2>${title}</h2>${description}<p>by ${topic[0].name}</p>`,
             `<a href="/create">create</a>
             <a href="/update?id=${queryData.id}">update</a>
             <form action="delete_process" method="post">
