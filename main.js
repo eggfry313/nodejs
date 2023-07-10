@@ -4,6 +4,14 @@ var url = require('url');
 var qs = require('querystring');
 var template = require('./lib/template.js')
 var sanitizeHtml = require('sanitize-html')
+var mysql = require('mysql');
+var dbCon = mysql.createConnection({
+  host: 'localhost',
+  user: 'Nodejs',
+  password: '12345678',
+  database: 'opentutorials'
+});
+dbCon.connect();
 
 var app = http.createServer(function (request, response) {
   var _url = request.url;
@@ -12,15 +20,26 @@ var app = http.createServer(function (request, response) {
 
   if (pathname === '/') {
     if (queryData.id === undefined) {
-      fs.readdir('./data', function (err, filelist) {
+      // fs.readdir('./data', function (err, filelist) {
+      //   var title = 'Welcome';
+      //   var description = 'Hello, Node.js';
+      //   var list = template.list(filelist);
+      //   var html = template.HTML(title, list, `<h2>${title}</h2>${description}`,
+      //     `<a href="/create">create</a>`);
+      //   response.writeHead(200);
+      //   response.end(html);
+      // });
+      dbCon.query(`select * from topic`, function (error, topics) {
+        console.log(topics);
         var title = 'Welcome';
         var description = 'Hello, Node.js';
-        var list = template.list(filelist);
-        var html = template.HTML(title, list, `<h2>${title}</h2>${description}`,
+        var list = template.list(topics);
+        var html = template.HTML(title, list, 
+          `<h2>${title}</h2>${description}`,
           `<a href="/create">create</a>`);
         response.writeHead(200);
         response.end(html);
-      });
+      })
     } else {
       fs.readdir('./data', function (err, filelist) {
         fs.readFile(`data/${queryData.id}`, 'utf-8', function (err, description) {
@@ -28,7 +47,7 @@ var app = http.createServer(function (request, response) {
           var sanitizeTitle = sanitizeHtml(title);
           var sanitizeDescription = sanitizeHtml(description);
           var list = template.list(filelist);
-          var html = template.HTML(title, list, 
+          var html = template.HTML(title, list,
             `<h2>${sanitizeTitle}</h2>${sanitizeDescription}`,
             `<a href="/create">create</a>
              <a href="/update?id=${sanitizeTitle}">update</a>
@@ -89,7 +108,7 @@ var app = http.createServer(function (request, response) {
         response.end(html);
       });
     });
-  } else if(pathname === '/update_process'){
+  } else if (pathname === '/update_process') {
     var body = '';
     request.on('data', function (data) {
       body += data;
@@ -99,14 +118,14 @@ var app = http.createServer(function (request, response) {
       var id = post.id;
       var title = post.title;
       var description = post.description;
-      fs.rename(`data/${id}`, `data/${title}`, function(err){
+      fs.rename(`data/${id}`, `data/${title}`, function (err) {
         fs.writeFile(`data/${title}`, description, 'utf-8', function (err) {
           response.writeHead(302, { Location: `/?id=${title}` });
           response.end();
         });
       });
     });
-  } else if(pathname === '/delete_process'){
+  } else if (pathname === '/delete_process') {
     var body = '';
     request.on('data', function (data) {
       body += data;
@@ -114,9 +133,9 @@ var app = http.createServer(function (request, response) {
     request.on('end', function () {
       var post = qs.parse(body);
       var id = post.id;
-      fs.unlink(`data/${id}`, function(err){
+      fs.unlink(`data/${id}`, function (err) {
         response.writeHead(302, { Location: `/` });
-          response.end();
+        response.end();
       })
     });
   } else {
