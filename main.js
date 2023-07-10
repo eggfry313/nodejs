@@ -34,14 +34,37 @@ var app = http.createServer(function (request, response) {
         var title = 'Welcome';
         var description = 'Hello, Node.js';
         var list = template.list(topics);
-        var html = template.HTML(title, list, 
+        var html = template.HTML(title, list,
           `<h2>${title}</h2>${description}`,
           `<a href="/create">create</a>`);
         response.writeHead(200);
         response.end(html);
       })
     } else {
-      fs.readdir('./data', function (err, filelist) {
+      dbCon.query(`select * from topic`, function (error, topics) {
+        if (error) {
+          throw error;
+        }
+        dbCon.query(`select * from topic where id=?`, [queryData.id], function (errorSec, topic) {
+          if (errorSec) {
+            throw errorSec;
+          }
+          var title = topic[0].title;
+          var description = topic[0].description;
+          var list = template.list(topic);
+          var html = template.HTML(title, list,
+            `<h2>${title}</h2>${description}`,
+            `<a href="/create">create</a>
+            <a href="/update?id=${queryData.id}">update</a>
+            <form action="delete_process" method="post">
+              <input type="hidden" name="id" value="${queryData.id}">
+              <input type="submit" value="delete">  
+            </form>`);
+          response.writeHead(200);
+          response.end(html);
+        })
+      })
+      /* fs.readdir('./data', function (err, filelist) {
         fs.readFile(`data/${queryData.id}`, 'utf-8', function (err, description) {
           var title = queryData.id;
           var sanitizeTitle = sanitizeHtml(title);
@@ -59,7 +82,7 @@ var app = http.createServer(function (request, response) {
           response.writeHead(200);
           response.end(html);
         });
-      });
+      }); */
     }
   } else if (pathname === '/create') {
     fs.readdir('./data', function (err, filelist) {
