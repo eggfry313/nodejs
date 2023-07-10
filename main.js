@@ -5,6 +5,7 @@ var qs = require('querystring');
 var template = require('./lib/template.js')
 var sanitizeHtml = require('sanitize-html')
 var mysql = require('mysql');
+const { error } = require('console');
 var dbCon = mysql.createConnection({
   host: 'localhost',
   user: 'Nodejs',
@@ -78,8 +79,7 @@ var app = http.createServer(function (request, response) {
     });
     request.on('end', function () {
       var post = qs.parse(body);
-      var title = post.title;
-      var description = post.description;
+
       dbCon.query(`
       insert into topic (title, description, created, author_id) 
       values(?, ?, NOW(), ?)`, [post.title, post.description, 1], function(error, results){
@@ -91,24 +91,29 @@ var app = http.createServer(function (request, response) {
       })
     });
   } else if (pathname === '/update') {
-    fs.readdir('./data', function (err, filelist) {
-      fs.readFile(`data/${queryData.id}`, 'utf-8', function (err, description) {
-        var title = queryData.id;
-        var list = template.list(filelist);
-        var html = template.HTML(title, list,
+    dbCon.query(`select * from topic`, function(error, topics){
+      if(error){
+        throw error;
+      }
+      dbCon.query(`select * from topic where id=?`, [queryData.id], function(errorSec, topic){
+        if(errorSec){
+          throw errorSec;
+        }
+        var list = template.list(topics);
+        var html = template.HTML(topic[0].title, list,
           `
           <form action="/update_process" method = "post">
-            <input type = "hidden" name = "id" value = "${title}"
-            <p><input type = "text" name = "title" placeholder="title" value = "${title}"></p>
-            <p><textarea name = "description" placeholder="description">${description}</textarea></p>
+            <input type = "hidden" name = "id" value = "${topic[0].id}"
+            <p><input type = "text" name = "title" placeholder="title" value = "${topic[0].title}"></p>
+            <p><textarea name = "description" placeholder="description">${topic[0].description}</textarea></p>
             <p><input type = "submit"></p>
           </form>
           `,
-          `<a href="/create">create</a> <a href="/update?id=${title}">update</a>`);
+          `<a href="/create">create</a> <a href="/update?id=${topic[0].id}">update</a>`);
         response.writeHead(200);
         response.end(html);
-      });
-    });
+      })
+    })
   } else if (pathname === '/update_process') {
     var body = '';
     request.on('data', function (data) {
@@ -116,15 +121,11 @@ var app = http.createServer(function (request, response) {
     });
     request.on('end', function () {
       var post = qs.parse(body);
-      var id = post.id;
-      var title = post.title;
-      var description = post.description;
-      fs.rename(`data/${id}`, `data/${title}`, function (err) {
-        fs.writeFile(`data/${title}`, description, 'utf-8', function (err) {
-          response.writeHead(302, { Location: `/?id=${title}` });
-          response.end();
-        });
-      });
+      console.log(post);
+      dbCon.query('UPDATE topic SET title=?, description=?, author_id=1 WHERE id=?', [post.title, post.description, post.id], function(error, result){
+        response.writeHead(302, {Location: `/?id=${post.id}`});
+        response.end();
+      })
     });
   } else if (pathname === '/delete_process') {
     var body = '';
